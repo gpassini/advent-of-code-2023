@@ -16,8 +16,17 @@ var (
 func main() {
 	var res int
 	r := bufio.NewScanner(strings.NewReader(input))
-	for r.Scan() {
+	var cardCopies []int
+	for lineIdx := 0; r.Scan(); lineIdx++ {
 		line := r.Text()
+
+		// each card has 1 copy by default
+		if len(cardCopies) < lineIdx+1 {
+			cardCopies = append(cardCopies, 1)
+		} else {
+			cardCopies[lineIdx]++
+		}
+
 		// card ID
 		cardId, lineTail := readCardId(line)
 		card := Card{id: cardId}
@@ -34,9 +43,17 @@ func main() {
 			number, lineTail, more = readNumber(lineTail)
 			card.AddNumber(number)
 		}
-		// calculate card score
-		fmt.Println(card)
-		res += card.CalculateScore()
+		// count winning numbers
+		score := card.CountWinningNumbers()
+		for i := lineIdx + 1; i <= lineIdx+score; i++ {
+			if len(cardCopies) < i+1 {
+				cardCopies = append(cardCopies, cardCopies[lineIdx])
+			} else {
+				cardCopies[i] += cardCopies[lineIdx]
+			}
+		}
+		fmt.Printf("%s has %d winning numbers and %d copies\n", card, score, cardCopies[lineIdx])
+		res += cardCopies[lineIdx]
 	}
 	println(res)
 }
@@ -61,7 +78,7 @@ func (c *Card) AddNumber(n string) {
 	c.numbers = append(c.numbers, n)
 }
 
-func (c *Card) CalculateScore() int {
+func (c Card) CalculateScore() int {
 	var score int
 	slices.Sort(c.winningNumbers)
 	for _, n := range c.numbers {
@@ -74,6 +91,17 @@ func (c *Card) CalculateScore() int {
 		}
 	}
 	return score
+}
+
+func (c Card) CountWinningNumbers() int {
+	var count int
+	slices.Sort(c.winningNumbers)
+	for _, n := range c.numbers {
+		if _, ok := slices.BinarySearch(c.winningNumbers, n); ok {
+			count++
+		}
+	}
+	return count
 }
 
 func readCardId(line string) (id string, rest string) {
