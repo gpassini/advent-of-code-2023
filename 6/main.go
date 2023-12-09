@@ -13,23 +13,14 @@ var (
 )
 
 func main() {
-	var res int
 	r := bufio.NewScanner(strings.NewReader(input))
 	r.Scan()
-	times := readAllNumbers(r.Text())
-	fmt.Println("Times:", times)
+	time := readOneNumber(r.Text())
+	fmt.Println("Time:", time)
 	r.Scan()
-	distances := readAllNumbers(r.Text())
-	fmt.Println("Distances:", distances)
-	for i, time := range times {
-		n := calculateOptions(time, distances[i])
-		if res == 0 {
-			res = n
-		} else {
-			res *= n
-		}
-	}
-	println(res)
+	distance := readOneNumber(r.Text())
+	fmt.Println("Distance:", distance)
+	println(calculateOptions(time, distance))
 }
 
 func calculateOptions(time, distance int) int {
@@ -44,6 +35,16 @@ func calculateOptions(time, distance int) int {
 		}
 	}
 	return count
+}
+
+func readOneNumber(s string) int {
+	var currNumber int
+	for _, c := range s {
+		if n, ok := charIsInt(c); ok {
+			currNumber = currNumber*10 + n
+		}
+	}
+	return currNumber
 }
 
 func readAllNumbers(s string) []int {
