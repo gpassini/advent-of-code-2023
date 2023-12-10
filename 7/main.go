@@ -19,7 +19,8 @@ const (
 )
 
 const (
-	two Card = iota
+	joker Card = iota
+	two
 	three
 	four
 	five
@@ -28,7 +29,6 @@ const (
 	eight
 	nine
 	ten
-	jack
 	queen
 	king
 	ace
@@ -108,16 +108,22 @@ func calculateCombination(cards [5]Card) Combination {
 
 	var highestCount int
 	var secondHighestCount int
-	for _, count := range cardToCount {
-		if count > highestCount {
-			highestCount, count = count, highestCount
-		}
-		if count > secondHighestCount {
-			secondHighestCount = count
+	var jokerCount int
+	for card, count := range cardToCount {
+		if card == joker {
+			jokerCount = count
+		} else {
+			if count > highestCount {
+				highestCount, count = count, highestCount
+			}
+			if count > secondHighestCount {
+				secondHighestCount = count
+			}
 		}
 	}
 
-	fmt.Println(highestCount, secondHighestCount)
+	fmt.Println(highestCount, secondHighestCount, jokerCount)
+	highestCount += jokerCount
 
 	switch highestCount {
 	case 5:
@@ -143,11 +149,11 @@ func calculateCombination(cards [5]Card) Combination {
 
 func charToCard(c rune) Card {
 	if c >= '2' && c <= '9' {
-		return Card(c - '0' - 2)
+		return Card(c - '0' - 1)
 	} else if c == 'T' {
 		return ten
 	} else if c == 'J' {
-		return jack
+		return joker
 	} else if c == 'Q' {
 		return queen
 	} else if c == 'K' {
