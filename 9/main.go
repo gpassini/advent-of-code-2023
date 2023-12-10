@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	_ "embed"
+	"fmt"
 	"strings"
 )
 
@@ -16,7 +17,10 @@ func main() {
 	r := bufio.NewScanner(strings.NewReader(input))
 	for r.Scan() {
 		h := parseLine(r.Text())
-		res += h.Extrapolate()
+		fmt.Println("History:", h)
+		e := h.Extrapolate()
+		fmt.Println("Extrapolation:", e)
+		res += e
 	}
 	println(res)
 }
@@ -30,7 +34,7 @@ func parseLine(s string) History {
 			break
 		}
 		n, rest = readNextInt(rest)
-		h = append(h, n)
+		h = append(History{n}, h...)
 	}
 	return h
 }
