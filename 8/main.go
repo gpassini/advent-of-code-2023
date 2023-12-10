@@ -30,43 +30,31 @@ func main() {
 	r.Scan() // empty line
 
 	labelToNode := make(map[string]*Node)
-	destsToLabel := make(map[string]string)
-	replaceLabel := make(map[string]string)
-	var firstNode *Node
+
+	var aNodes []*Node
 	for r.Scan() {
 		node := parseNode(r.Text())
-		if node.label == "AAA" {
-			firstNode = node
+		if strings.HasSuffix(node.label, "A") {
+			aNodes = append(aNodes, node)
 		}
-		dests := fmt.Sprintf("%s%s", node.leftLabel, node.rightLabel)
-		if label, ok := destsToLabel[dests]; ok {
-			fmt.Printf("Replaced %s with %s\n", node.label, label)
-			replaceLabel[node.label] = label
-			labelToNode[label] = node
-		} else {
-			destsToLabel[dests] = node.label
-			labelToNode[node.label] = node
-		}
+		labelToNode[node.label] = node
 	}
-	if firstNode == nil {
-		panic("AAA node not found")
+	if len(aNodes) == 0 {
+		panic("A nodes not found")
 	}
 
-	var stepsCount int
-	directionIter := directions.Iter()
-	node := firstNode
-	for {
-		fmt.Println("Node:", node)
-		if node.label == "ZZZ" {
-			break
+	periodEndSteps := make([]int, len(aNodes))
+	for i, node := range aNodes {
+		iter := directions.Iter()
+		node, directions := node.MoveIter(iter, labelToNode)
+		if !strings.HasSuffix(node.label, "Z") {
+			panic("expected end node")
 		}
-
-		var steps int
-		node, steps = node.Move(directionIter, labelToNode, replaceLabel)
-		stepsCount += steps
+		periodEndSteps[i] = len(directions)
+		fmt.Println("Period:", i, periodEndSteps[i])
 	}
 
-	println(stepsCount)
+	println(lcm(periodEndSteps[0], periodEndSteps[1], periodEndSteps[2:]...))
 }
 
 type Node struct {
@@ -76,13 +64,10 @@ type Node struct {
 	visited    map[string]*Node
 }
 
-func (n *Node) Visit(direction Direction, labelToNode map[string]*Node, replaceLabel map[string]string) *Node {
+func (n *Node) Visit(direction Direction, labelToNode map[string]*Node) *Node {
 	switch direction {
 	case left:
 		leftLabel := n.leftLabel
-		if label, ok := replaceLabel[leftLabel]; ok {
-			leftLabel = label
-		}
 		if leftNode, ok := labelToNode[leftLabel]; !ok {
 			panic(fmt.Sprintf("node not found with label: %s", leftLabel))
 		} else {
@@ -91,9 +76,6 @@ func (n *Node) Visit(direction Direction, labelToNode map[string]*Node, replaceL
 		}
 	case right:
 		rightLabel := n.rightLabel
-		if label, ok := replaceLabel[rightLabel]; ok {
-			rightLabel = label
-		}
 		if rightNode, ok := labelToNode[rightLabel]; !ok {
 			panic(fmt.Sprintf("node not found with label: %s", rightLabel))
 		} else {
@@ -105,27 +87,39 @@ func (n *Node) Visit(direction Direction, labelToNode map[string]*Node, replaceL
 	}
 }
 
-func (n *Node) Move(directionsIter DirectionsIter, labelToNode map[string]*Node, replaceLabel map[string]string) (*Node, int) {
-	var steps int
+func (n *Node) MoveIter(directionsIter DirectionsIter, labelToNode map[string]*Node) (*Node, Directions) {
 	var directions Directions
 	furthestNode := n
 	for {
-		if furthestNode.label == "ZZZ" {
-			return furthestNode, steps
+		if len(directions) > 0 && strings.HasSuffix(furthestNode.label, "Z") {
+			return furthestNode, directions
 		}
 		latestDirection := directionsIter()
-		steps++
 		directions = append(directions, latestDirection)
 		directionsStr := directions.String()
 		if maybeFurthestNode, ok := n.visited[directionsStr]; ok {
 			furthestNode = maybeFurthestNode
 		} else {
-			furthestNode := furthestNode.Visit(latestDirection, labelToNode, replaceLabel)
+			furthestNode = furthestNode.Visit(latestDirection, labelToNode)
 			n.visited[directionsStr] = furthestNode
-			fmt.Println("Evaluated:", directionsStr)
-			return furthestNode, steps
 		}
 	}
+}
+
+func (n *Node) Move(givenDirections Directions, labelToNode map[string]*Node) *Node {
+	furthestNode := n
+	var directions Directions
+	for _, latestDirection := range givenDirections {
+		directions = append(directions, latestDirection)
+		directionsStr := directions.String()
+		if maybeFurthestNode, ok := n.visited[directionsStr]; ok {
+			furthestNode = maybeFurthestNode
+		} else {
+			furthestNode = furthestNode.Visit(latestDirection, labelToNode)
+			n.visited[directionsStr] = furthestNode
+		}
+	}
+	return furthestNode
 }
 
 func (n Node) String() string {
@@ -190,4 +184,23 @@ func parseNode(s string) *Node {
 		rightLabel: rightLabel,
 		visited:    make(map[string]*Node),
 	}
+}
+
+func lcm(a, b int, integers ...int) int {
+	result := a * b / gcd(a, b)
+
+	for i := 0; i < len(integers); i++ {
+		result = lcm(result, integers[i])
+	}
+
+	return result
+}
+
+func gcd(a, b int) int {
+	for b != 0 {
+		t := b
+		b = a % b
+		a = t
+	}
+	return a
 }
