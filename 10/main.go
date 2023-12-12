@@ -17,6 +17,9 @@ const (
 	S_W    Pipe = '7'
 	Ground Pipe = '.'
 	Start  Pipe = 'S'
+
+	In  Pipe = 'I'
+	Out Pipe = 'O'
 )
 
 const (
@@ -29,12 +32,15 @@ const (
 var (
 	//go:embed input.txt
 	input string
+
+	allPipes = []Pipe{N_S, E_W, N_E, N_W, S_E, S_W}
 )
 
 func main() {
 	r := bufio.NewScanner(strings.NewReader(input))
 
 	var pipes Pipes
+	var isLoopPartMask [][]bool
 	var startingPoint Point
 
 	var lineIdx int
@@ -47,15 +53,21 @@ func main() {
 			}
 		}
 		pipes = append(pipes, pipesLine)
+		isLoopPartMask = append(isLoopPartMask, make([]bool, len(pipesLine)))
 		lineIdx++
 	}
 
 	var steps int
 	pos := startingPoint
 	lastDir := Up
+	firstDir := Direction('@')
 	for {
 		fmt.Println("Pos:", pos)
+		isLoopPartMask[pos.x][pos.y] = true
 		pos, lastDir = move(pipes, pos, lastDir)
+		if firstDir == Direction('@') {
+			firstDir = lastDir
+		}
 		steps++
 		if pipes[pos.x][pos.y] == Start {
 			break
@@ -63,9 +75,36 @@ func main() {
 	}
 
 	println(steps / 2)
+
+	startingPipe := FromDirections(firstDir, lastDir.Opposite())
+	pipes[startingPoint.x][startingPoint.y] = startingPipe
+
+	var res int
+	for i, pipesLine := range pipes {
+		inCount := paintInOut(pipesLine, isLoopPartMask[i])
+		fmt.Printf("Line %d has %d inside\n", i, inCount)
+		res += inCount
+	}
+
+	fmt.Println(pipes)
+
+	println(res)
 }
 
 type Pipe rune
+
+func FromDirections(d1, d2 Direction) Pipe {
+	if d1 == d2 {
+		panic("same directions given")
+	}
+	for _, p := range allPipes {
+		exits := p.Exits()
+		if slices.Contains(exits, d1) && slices.Contains(exits, d2) {
+			return p
+		}
+	}
+	panic("could not find pipe for given directions")
+}
 
 func (p Pipe) Connects(dir Direction) bool {
 	return slices.Contains(p.Exits(), dir)
@@ -94,6 +133,10 @@ func (p Pipe) Exits() []Direction {
 	}
 }
 
+func (p Pipe) String() string {
+	return string(p)
+}
+
 type Pipes [][]Pipe
 
 type Point struct {
@@ -113,6 +156,17 @@ func (p Point) Apply(d Direction) Point {
 	default:
 		panic(fmt.Sprintf("invalid direction: %d", d))
 	}
+}
+
+func (p Pipes) String() string {
+	var sb strings.Builder
+	for _, l := range p {
+		for _, c := range l {
+			sb.WriteRune(rune(c))
+		}
+		sb.WriteString("\n")
+	}
+	return sb.String()
 }
 
 type Direction int
@@ -160,4 +214,38 @@ func move(pipes Pipes, position Point, lastDirection Direction) (Point, Directio
 	}
 
 	panic(fmt.Sprintf("No exit found (%v, %v)", position, lastDirection))
+}
+
+func paintInOut(pipes []Pipe, isLoopMask []bool) (inCount int) {
+	var inside bool
+	var firstWallPipe Pipe
+	for i, p := range pipes {
+		if isLoopMask[i] {
+			switch p {
+			case N_S:
+				inside = !inside
+			case N_E, S_E:
+				// entering wall
+				firstWallPipe = p
+			case N_W:
+				// exiting wall
+				if firstWallPipe == S_E {
+					inside = !inside
+				}
+			case S_W:
+				// exiting wall
+				if firstWallPipe == N_E {
+					inside = !inside
+				}
+			}
+		} else {
+			if inside {
+				pipes[i] = In
+				inCount++
+			} else {
+				pipes[i] = Out
+			}
+		}
+	}
+	return inCount
 }
