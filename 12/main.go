@@ -44,27 +44,36 @@ func main() {
 }
 
 func parseRecord(s string) Record {
-	record := Record{}
-
+	var springs []SpringStatus
 	var lastIdx int
 	for i, c := range s {
 		lastIdx = i
 		if c == ' ' {
 			break
 		}
-		record.springs = append(record.springs, SpringStatus(c))
+		springs = append(springs, SpringStatus(c))
 	}
 
+	var damagedSpringGroups []int
 	var currNumber int
 	for _, c := range s[lastIdx+1:] {
 		if c >= '0' && c <= '9' {
 			currNumber = currNumber*10 + int(c-'0')
 		} else {
-			record.damagedSpringGroups = append(record.damagedSpringGroups, currNumber)
+			damagedSpringGroups = append(damagedSpringGroups, currNumber)
 			currNumber = 0
 		}
 	}
-	record.damagedSpringGroups = append(record.damagedSpringGroups, currNumber)
+	damagedSpringGroups = append(damagedSpringGroups, currNumber)
+
+	record := Record{}
+	for i := 0; i < 5; i++ {
+		record.springs = append(record.springs, springs...)
+		record.damagedSpringGroups = append(record.damagedSpringGroups, damagedSpringGroups...)
+		if i < 4 {
+			record.springs = append(record.springs, unknown)
+		}
+	}
 
 	return record
 }
@@ -82,6 +91,11 @@ func (r Record) calculatePossibilities(damagedStreak int) int {
 		} else {
 			return 0
 		}
+	}
+
+	if !r.stillPossible(damagedStreak) {
+		// println("took shortcut!")
+		return 0
 	}
 
 	spring := r.springs[0]
@@ -117,6 +131,66 @@ func (r Record) calculatePossibilities(damagedStreak int) int {
 	default:
 		panic(fmt.Sprintf("unknown spring status: %s", spring))
 	}
+}
+
+func (r Record) stillPossible(damagedStreak int) bool {
+	var listedDamagedSpringsCount int
+	for _, i := range r.damagedSpringGroups {
+		listedDamagedSpringsCount += i
+	}
+
+	var minDamagedSpringsAhead int
+	var maxDamagedSpringsAhead int
+	var minGroupsAhead int
+	inMinGroup := damagedStreak > 0
+	var maxGroupsAhead int
+	inMaxGroup := damagedStreak > 0
+	for _, s := range r.springs {
+		switch s {
+		case damaged:
+			minDamagedSpringsAhead++
+			maxDamagedSpringsAhead++
+			inMinGroup = true
+			inMaxGroup = true
+		case unknown:
+			maxDamagedSpringsAhead++
+			if inMaxGroup {
+				maxGroupsAhead++
+			}
+			inMaxGroup = !inMaxGroup
+		case operational:
+			if inMinGroup {
+				minGroupsAhead++
+				inMinGroup = false
+			}
+			if inMaxGroup {
+				maxGroupsAhead++
+				inMaxGroup = false
+			}
+		}
+	}
+	if inMinGroup {
+		// the line finishes with a potential group
+		minGroupsAhead++
+	}
+	if inMaxGroup {
+		maxGroupsAhead++
+	}
+	if minDamagedSpringsAhead+damagedStreak > listedDamagedSpringsCount {
+		return false
+	}
+	if maxDamagedSpringsAhead+damagedStreak < listedDamagedSpringsCount {
+		return false
+	}
+	if minGroupsAhead > len(r.damagedSpringGroups) {
+		return false
+	}
+	if maxGroupsAhead < len(r.damagedSpringGroups) {
+		return false
+	}
+
+	// We can still do better checks
+	return true
 }
 
 func (r Record) String() string {
