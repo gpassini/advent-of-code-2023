@@ -75,7 +75,7 @@ func (m CityMap) Visit(ctv CrucibleToVisit, visited map[VisitedCrucible]int) ([]
 		visited[currCrucible] = heatLoss
 	}
 
-	if rowIdx == len(m)-1 && columnIdx == len(m[0])-1 {
+	if rowIdx == len(m)-1 && columnIdx == len(m[0])-1 && dirStreak >= 4 {
 		// arrived at destination, no need for further visits
 		return nil, heatLoss
 	}
@@ -151,23 +151,38 @@ func (d Direction) RotateLeft() Direction {
 }
 
 func (d Direction) PossibleDirections(streak int) []PossibleDirection {
-	dirs := []PossibleDirection{
-		{
-			dir:    d.RotateRight(),
-			streak: 1,
-		},
-		{
-			dir:    d.RotateLeft(),
-			streak: 1,
-		},
-	}
-	if streak < 3 {
-		dirs = append(dirs, PossibleDirection{
+	if streak < 4 {
+		return []PossibleDirection{{
 			dir:    d,
 			streak: streak + 1,
-		})
+		}}
+	} else if streak < 10 {
+		return []PossibleDirection{
+			{
+				dir:    d,
+				streak: streak + 1,
+			},
+			{
+				dir:    d.RotateRight(),
+				streak: 1,
+			},
+			{
+				dir:    d.RotateLeft(),
+				streak: 1,
+			},
+		}
+	} else {
+		return []PossibleDirection{
+			{
+				dir:    d.RotateRight(),
+				streak: 1,
+			},
+			{
+				dir:    d.RotateLeft(),
+				streak: 1,
+			},
+		}
 	}
-	return dirs
 }
 
 type PossibleDirection struct {
