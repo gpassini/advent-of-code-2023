@@ -13,9 +13,7 @@ var (
 )
 
 func main() {
-	contraption := Contraption{
-		energized: make(map[Coordinate][]Direction),
-	}
+	var contraption Contraption
 	r := bufio.NewScanner(strings.NewReader(input))
 	for r.Scan() {
 		var tilesLine []Tile
@@ -25,18 +23,77 @@ func main() {
 		contraption.tiles = append(contraption.tiles, tilesLine)
 	}
 
-	tilesToVisit := []TileToVisit{{
-		rowIdx:    0,
-		columnIdx: 0,
-		dir:       right,
-	}}
-	for len(tilesToVisit) > 0 {
-		nextTile := tilesToVisit[0]
-		newTilesToVisit := contraption.Visit(nextTile.rowIdx, nextTile.columnIdx, nextTile.dir)
-		tilesToVisit = append(tilesToVisit[1:], newTilesToVisit...)
+	var res int
+	for i := 0; i < len(contraption.tiles); i++ {
+		// starting on the left side
+		contraption.energized = make(map[Coordinate][]Direction)
+		tilesToVisit := []TileToVisit{{
+			rowIdx:    i,
+			columnIdx: 0,
+			dir:       right,
+		}}
+		for len(tilesToVisit) > 0 {
+			nextTile := tilesToVisit[0]
+			newTilesToVisit := contraption.Visit(nextTile.rowIdx, nextTile.columnIdx, nextTile.dir)
+			tilesToVisit = append(tilesToVisit[1:], newTilesToVisit...)
+		}
+		if n := len(contraption.energized); n > res {
+			res = n
+		}
+	}
+	for i := 0; i < len(contraption.tiles); i++ {
+		// starting on the right side
+		contraption.energized = make(map[Coordinate][]Direction)
+		tilesToVisit := []TileToVisit{{
+			rowIdx:    i,
+			columnIdx: len(contraption.tiles[0]) - 1,
+			dir:       left,
+		}}
+		for len(tilesToVisit) > 0 {
+			nextTile := tilesToVisit[0]
+			newTilesToVisit := contraption.Visit(nextTile.rowIdx, nextTile.columnIdx, nextTile.dir)
+			tilesToVisit = append(tilesToVisit[1:], newTilesToVisit...)
+		}
+		if n := len(contraption.energized); n > res {
+			res = n
+		}
+	}
+	for i := 0; i < len(contraption.tiles[0]); i++ {
+		// starting on the upper side
+		contraption.energized = make(map[Coordinate][]Direction)
+		tilesToVisit := []TileToVisit{{
+			rowIdx:    0,
+			columnIdx: i,
+			dir:       down,
+		}}
+		for len(tilesToVisit) > 0 {
+			nextTile := tilesToVisit[0]
+			newTilesToVisit := contraption.Visit(nextTile.rowIdx, nextTile.columnIdx, nextTile.dir)
+			tilesToVisit = append(tilesToVisit[1:], newTilesToVisit...)
+		}
+		if n := len(contraption.energized); n > res {
+			res = n
+		}
+	}
+	for i := 0; i < len(contraption.tiles[0]); i++ {
+		// starting on the bottom side
+		contraption.energized = make(map[Coordinate][]Direction)
+		tilesToVisit := []TileToVisit{{
+			rowIdx:    len(contraption.tiles) - 1,
+			columnIdx: i,
+			dir:       up,
+		}}
+		for len(tilesToVisit) > 0 {
+			nextTile := tilesToVisit[0]
+			newTilesToVisit := contraption.Visit(nextTile.rowIdx, nextTile.columnIdx, nextTile.dir)
+			tilesToVisit = append(tilesToVisit[1:], newTilesToVisit...)
+		}
+		if n := len(contraption.energized); n > res {
+			res = n
+		}
 	}
 
-	println(len(contraption.energized))
+	println(res)
 }
 
 type Direction uint
